@@ -31,7 +31,14 @@ viv-scraper/
    cd viv-scraper
    ```
 
-2. Create a `.env` file in the root
+2. Create a `.env` file in the root:
+   ```
+   POSTGRES_DB=...
+   POSTGRES_USER=...
+   POSTGRES_PASSWORD=...
+   DB_HOST=db
+   DB_PORT=5432
+   ```
 
 3. Start the database and load all products:
    ```bash
