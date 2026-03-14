@@ -12,7 +12,6 @@ HEADERS = {
 BASE_URL = "https://webshop.viv.nl"
 DOMAIN   = "webshop.viv.nl"
 
-# URLs кои НЕ се категории со производи
 SKIP_URLS = {
     f"{BASE_URL}/contact-webshop",
     f"{BASE_URL}/retourneren-service",
@@ -21,7 +20,7 @@ SKIP_URLS = {
 }
 
 
-# ─── ЧЕКОР 1: Земи ги сите категории од менито ────────────────────────────────
+# getting category URLs from the menu
 def get_category_urls():
     print("Fetching categories from menu...")
     resp = requests.get(BASE_URL, headers=HEADERS, timeout=20)
@@ -54,7 +53,7 @@ def get_category_urls():
     return categories
 
 
-# ─── ЧЕКОР 2: Земи product URLs од категорија (со пагинација) ─────────────────
+# getting product URLs from a category page (with pagination)
 def get_product_urls_from_category(category_url):
     product_urls = []
     page         = 1
@@ -74,7 +73,6 @@ def get_product_urls_from_category(category_url):
                 if href and href not in product_urls:
                     product_urls.append(href)
 
-            # Следна страница?
             if not soup.select_one("a.action.next"):
                 break
 
@@ -88,13 +86,13 @@ def get_product_urls_from_category(category_url):
     return product_urls
 
 
-# ─── ЧЕКОР 3: Scrape индивидуален производ ────────────────────────────────────
+# scraping product details from a product page
 def scrape_product(url):
     try:
         resp = requests.get(url, headers=HEADERS, timeout=20)
         soup = BeautifulSoup(resp.text, "lxml")
 
-        # Ime
+        # Name
         name_el = soup.select_one("h1.page-title span")
         if not name_el:
             return None
@@ -260,7 +258,7 @@ def scrape_product(url):
             try:
                 decoder    = json.JSONDecoder()
                 raw_tiers, _ = decoder.raw_decode(resp.text, tier_match.end())
-                base_excl  = price  # min-qty price excl. used for discount %
+                base_excl  = price
                 for t in raw_tiers:
                     qty_t  = int(t.get("qty", 0))
                     p_excl = round(float(t.get("basePrice", 0)), 4)
@@ -315,42 +313,25 @@ def scrape_product(url):
         return None
 
 
-# ─── ГЛАВНА ФУНКЦИЈА ───────────────────────────────────────────────────────────
 def main():
-
-    # 1. Земи ги категориите од менито
-    print("=" * 55)
-    print("ЧЕКОР 1: Категории од менито")
-    print("=" * 55)
     categories = get_category_urls()
 
-    # 2. За секоја категорија собери product URLs
-    print("\n" + "=" * 55)
-    print("ЧЕКОР 2: Собирање product URLs")
-    print("=" * 55)
     all_product_urls = []
     seen_urls        = set()
 
+    print(f"\nCollecting product URLs from {len(categories)} categories...")
     for i, cat in enumerate(categories, 1):
-        print(f"[{i}/{len(categories)}] {cat['name']}")
         urls = get_product_urls_from_category(cat["url"])
-
         new = 0
         for u in urls:
             if u not in seen_urls:
                 seen_urls.add(u)
                 all_product_urls.append(u)
                 new += 1
-
-        print(f"  → {new} new | total: {len(all_product_urls)}")
+        print(f"  [{i}/{len(categories)}] {cat['name']} — {new} new (total: {len(all_product_urls)})")
         time.sleep(0.5)
 
-    print(f"\n✅ Total unique product URLs: {len(all_product_urls)}")
-
-    # 3. Scrape секој производ
-    print("\n" + "=" * 55)
-    print("ЧЕКОР 3: Scraping производи")
-    print("=" * 55)
+    print(f"\nScraping {len(all_product_urls)} products...")
     all_products = []
     seen_skus    = set()
     failed       = 0
@@ -360,7 +341,7 @@ def main():
 
         if not product:
             failed += 1
-            print(f"  ❌ [{i}/{len(all_product_urls)}] FAILED: {url}")
+            print(f"  [{i}/{len(all_product_urls)}] FAILED: {url}")
             continue
 
         if product["sku"] in seen_skus:
@@ -368,22 +349,13 @@ def main():
 
         seen_skus.add(product["sku"])
         all_products.append(product)
-        print(f"  ✅ [{i}/{len(all_product_urls)}] {product['sku']} | {product['name'][:45]}")
-
+        print(f"  [{i}/{len(all_product_urls)}] {product['sku']} — {product['name'][:50]}")
         time.sleep(0.5)
 
-    # 4. Зачувај во JSON
     with open("all_products.json", "w", encoding="utf-8") as f:
         json.dump(all_products, f, ensure_ascii=False, indent=2)
 
-    print(f"\n{'=' * 55}")
-    print(f"✅ DONE!")
-    print(f"   Категории   : {len(categories)}")
-    print(f"   Product URLs: {len(all_product_urls)}")
-    print(f"   Зачувани    : {len(all_products)}")
-    print(f"   Неуспешни   : {failed}")
-    print(f"   Фајл        : all_products.json")
-    print(f"{'=' * 55}")
+    print(f"\nDone. {len(all_products)} products saved, {failed} failed.")
 
 
 if __name__ == "__main__":
