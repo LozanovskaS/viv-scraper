@@ -18,7 +18,7 @@ viv-scraper/
     ├── db_loader.py        # loads all_products.json into PostgreSQL
     ├── requirements.txt
     ├── Dockerfile
-    └── all_products.json   # 911 products (last scrape)
+    └── all_products.json   # 911 products
 ```
 
 ## Quick start
@@ -27,18 +27,11 @@ viv-scraper/
 
 1. Clone the repo
    ```bash
-   git clone https://github.com/YOUR_USERNAME/viv-scraper.git
+   git clone https://github.com/LozanovskaS/viv-scraper.git
    cd viv-scraper
    ```
 
-2. Create a `.env` file in the root:
-   ```
-   POSTGRES_DB=viv_scraper
-   POSTGRES_USER=viv
-   POSTGRES_PASSWORD=viv123
-   DB_HOST=db
-   DB_PORT=5432
-   ```
+2. Create a `.env` file in the root
 
 3. Start the database and load all products:
    ```bash
